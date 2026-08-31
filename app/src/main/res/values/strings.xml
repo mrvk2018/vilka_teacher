@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KoreanImmersion</string>
+    <string name="channel_playback_name">Воспроизведение урока</string>
+    <string name="channel_playback_desc">Управление аудио урока в фоне</string>
+    <string name="notification_playing">Идёт урок</string>
+    <string name="notification_paused">Пауза</string>
+    <string name="action_play">Играть</string>
+    <string name="action_pause">Пауза</string>
+    <string name="action_stop">Стоп</string>
+    <string name="exam_prompt_title">Проверить усвоение?</string>
+    <string name="exam_prompt_message">Урок прослушан полностью. Хочешь проверить, как усвоил материал?</string>
+    <string name="exam_prompt_yes">Да, пройти экзамен</string>
+    <string name="exam_prompt_later">Позже</string>
+</resources>
