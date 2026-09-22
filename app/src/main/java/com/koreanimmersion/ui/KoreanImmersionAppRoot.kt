@@ -1,5 +1,6 @@
 package com.koreanimmersion.ui
 
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -22,6 +23,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.koreanimmersion.ui.screens.ExamScreen
+import com.koreanimmersion.ui.screens.HangulAlphabetScreen
+import com.koreanimmersion.ui.screens.HangulDrawingScreen
 import com.koreanimmersion.ui.screens.HomeScreen
 import com.koreanimmersion.ui.screens.LessonPlayerScreen
 import com.koreanimmersion.ui.screens.ManualTopicScreen
@@ -79,7 +82,30 @@ fun KoreanImmersionAppRoot() {
                 HomeScreen(
                     topics = vm.topics,
                     onTopicClick = { navController.navigate("topic/$it") },
-                    onManualTopicClick = { navController.navigate("manual/$it") }
+                    onManualTopicClick = { navController.navigate("manual/$it") },
+                    onHangulClick = { navController.navigate("hangul_alphabet") }
+                )
+            }
+            composable("hangul_alphabet") {
+                HangulAlphabetScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenDrawing = { letter ->
+                        navController.navigate("hangul_drawing/${Uri.encode(letter)}")
+                    }
+                )
+            }
+            composable(
+                "hangul_drawing/{letter}",
+                arguments = listOf(navArgument("letter") { type = NavType.StringType })
+            ) { entry ->
+                val letter = Uri.decode(entry.arguments?.getString("letter").orEmpty())
+                if (letter.isEmpty()) {
+                    navController.popBackStack()
+                    return@composable
+                }
+                HangulDrawingScreen(
+                    letter = letter,
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(

@@ -8,6 +8,10 @@
 .kotlin/
 hs_err_*.log
 replay_*.log
+__pycache__/
+*.pyc
+.env
+tools/python/.env
 /captures
 .externalNativeBuild
 .cxx

@@ -11,4 +11,6 @@ object NavRoutes {
     fun introduction(topicId: Long) = "introduction/$topicId"
     fun speaking(topicId: Long) = "speaking/$topicId"
     fun llmDialog(topicId: Long) = "llm_dialog/$topicId"
+    const val HANGUL_ALPHABET = "hangul_alphabet"
+    fun hangulDrawing(letter: String) = "hangul_drawing/$letter"
 }

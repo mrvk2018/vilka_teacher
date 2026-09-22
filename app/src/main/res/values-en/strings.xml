@@ -3,6 +3,23 @@
     <string name="app_name">KoreanImmersion</string>
     <string name="nav_lessons">Lessons</string>
     <string name="nav_progress">Progress</string>
+    <string name="home_title">KoreanImmersion</string>
+    <string name="home_subtitle">Stage 1: conversational Korean through phonetic immersion</string>
+    <string name="topic_list_subtitle">Introduction, speaking, and dialog available</string>
+    <string name="topic_course_stages_hint">Sub-stages 1–3 work offline on device (TTS and microphone).</string>
+    <string name="topic_legacy_lessons_header">Audio lessons (extended content)</string>
+    <string name="topic_no_legacy_lessons">No separate audio lessons for this topic yet — use the sub-stages above.</string>
+
+    <string name="hangul_learn_banner">Learn Hangul 🇰🇷</string>
+    <string name="hangul_alphabet_title">Hangul alphabet</string>
+    <string name="hangul_alphabet_subtitle">Tap a letter to hear it. Use the pencil icon to practice writing.</string>
+    <string name="hangul_section_consonants">Consonants</string>
+    <string name="hangul_section_vowels">Vowels</string>
+    <string name="hangul_practice_letter">Writing practice</string>
+    <string name="hangul_drawing_title">Write the letter: %1$s</string>
+    <string name="hangul_drawing_instruction">Draw on the screen with your finger, following the letter shape.</string>
+    <string name="hangul_clear_canvas">Clear</string>
+    <string name="hangul_play_letter">Play letter sound</string>
     <string name="intro_screen_title_default">Introduction</string>
     <string name="intro_stage_subtitle">Sub-stage 1: listen to topic phrases. If no audio file is set, Korean TTS is used on device.</string>
     <string name="intro_start_audio_lesson">Start audio lesson</string>

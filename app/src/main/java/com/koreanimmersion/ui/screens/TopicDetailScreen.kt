@@ -8,13 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,46 +61,62 @@ fun TopicDetailScreen(
                 title = { Text(topicName) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 }
             )
         }
     ) { padding ->
-        if (lessonList.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)
-            ) {
-                Text("Уроки для этой темы пока не добавлены.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    FilledTonalButton(
-                        onClick = { onIntroductionClick(topicId) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.intro_open_stage))
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    FilledTonalButton(
-                        onClick = { onSpeakingClick(topicId) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.speaking_open_stage))
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    FilledTonalButton(
-                        onClick = { onLlmDialogClick(topicId) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.llm_dialog_open_stage))
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.topic_course_stages_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                FilledTonalButton(
+                    onClick = { onIntroductionClick(topicId) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = true
+                ) {
+                    Text(stringResource(R.string.intro_open_stage))
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                FilledTonalButton(
+                    onClick = { onSpeakingClick(topicId) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = true
+                ) {
+                    Text(stringResource(R.string.speaking_open_stage))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                FilledTonalButton(
+                    onClick = { onLlmDialogClick(topicId) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = true
+                ) {
+                    Text(stringResource(R.string.llm_dialog_open_stage))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.topic_legacy_lessons_header),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            if (lessonList.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.topic_no_legacy_lessons),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
                 items(lessonList, key = { it.id }) { lesson ->
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { onLessonClick(lesson.id) }

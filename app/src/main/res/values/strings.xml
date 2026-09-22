@@ -25,6 +25,23 @@
 
     <string name="nav_lessons">Уроки</string>
     <string name="nav_progress">Прогресс</string>
+    <string name="home_title">KoreanImmersion</string>
+    <string name="home_subtitle">Этап 1: разговорный корейский через фонетическое погружение</string>
+    <string name="topic_list_subtitle">Ознакомление, говорение и диалог доступны</string>
+    <string name="topic_course_stages_hint">Подэтапы 1–3 работают офлайн на устройстве (TTS и микрофон).</string>
+    <string name="topic_legacy_lessons_header">Аудио-уроки (расширенный контент)</string>
+    <string name="topic_no_legacy_lessons">Для этой темы пока нет отдельных аудио-уроков — используйте подэтапы выше.</string>
+
+    <string name="hangul_learn_banner">Изучить Хангыль 🇰🇷</string>
+    <string name="hangul_alphabet_title">Алфавит Хангыль</string>
+    <string name="hangul_alphabet_subtitle">Нажмите на букву, чтобы услышать произношение. Иконка карандаша — тренировка письма.</string>
+    <string name="hangul_section_consonants">Согласные</string>
+    <string name="hangul_section_vowels">Гласные</string>
+    <string name="hangul_practice_letter">Практика письма</string>
+    <string name="hangul_drawing_title">Напиши букву: %1$s</string>
+    <string name="hangul_drawing_instruction">Проведите пальцем по экрану, повторяя форму буквы.</string>
+    <string name="hangul_clear_canvas">Очистить</string>
+    <string name="hangul_play_letter">Прослушать букву</string>
 
     <string name="intro_screen_title_default">Ознакомление</string>
     <string name="intro_stage_subtitle">Подэтап 1: прослушайте фразы темы. Если аудиофайла нет — используется корейский TTS на устройстве.</string>
