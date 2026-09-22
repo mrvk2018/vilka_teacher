@@ -5,7 +5,10 @@ import org.json.JSONObject
 
 data class McQuestion(
     val phraseId: Long,
-    val questionText: String,
+    /** Романизация — без хангыля, для подсказки после ответа (опционально). */
+    val koreanRomanization: String,
+    /** Локальный TTS-файл корейской фразы. */
+    val audioUrl: String?,
     val options: List<String>,
     val correctIndex: Int
 )

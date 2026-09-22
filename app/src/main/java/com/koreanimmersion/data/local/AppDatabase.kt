@@ -8,6 +8,12 @@ import com.koreanimmersion.data.local.dao.PhraseDao
 import com.koreanimmersion.data.local.dao.PhraseSrsDao
 import com.koreanimmersion.data.local.dao.ProgressDao
 import com.koreanimmersion.data.local.dao.TopicDao
+import com.koreanimmersion.core.database.dao.ContentPhraseDao
+import com.koreanimmersion.core.database.dao.ContentTopicDao
+import com.koreanimmersion.core.database.dao.UserProgressDao
+import com.koreanimmersion.core.database.entity.PhraseEntity as CoursePhraseEntity
+import com.koreanimmersion.core.database.entity.TopicEntity as CourseTopicEntity
+import com.koreanimmersion.core.database.entity.UserProgressEntity
 import com.koreanimmersion.data.local.dao.UserLessonProgressDao
 import com.koreanimmersion.data.local.entity.ExamAttemptEntity
 import com.koreanimmersion.data.local.entity.HangulStagePlaceholderEntity
@@ -25,9 +31,12 @@ import com.koreanimmersion.data.local.entity.UserLessonProgressEntity
         UserLessonProgressEntity::class,
         ExamAttemptEntity::class,
         PhraseSrsEntity::class,
-        HangulStagePlaceholderEntity::class
+        HangulStagePlaceholderEntity::class,
+        UserProgressEntity::class,
+        CourseTopicEntity::class,
+        CoursePhraseEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,4 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun examAttemptDao(): ExamAttemptDao
     abstract fun phraseSrsDao(): PhraseSrsDao
     abstract fun progressDao(): ProgressDao
+    abstract fun userProgressDao(): UserProgressDao
+    abstract fun courseTopicDao(): ContentTopicDao
+    abstract fun coursePhraseDao(): ContentPhraseDao
 }

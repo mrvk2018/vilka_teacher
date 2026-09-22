@@ -7,7 +7,7 @@ import com.koreanimmersion.data.local.entity.PhraseEntity
 import com.koreanimmersion.data.local.entity.TopicEntity
 
 /**
- * Контент для тем 1–13 (магазин … знакомство).
+ * Контент для тем 1–14 (магазин … парикмахерская).
  * Аудио URL — заглушки под assets; озвучка — отдельным шагом (TTS).
  * ⚠️ Весь словарь требует проверки носителем перед продакшеном.
  */
@@ -17,9 +17,13 @@ object DatabaseSeeder {
 
     suspend fun seedIfEmpty(db: AppDatabase) {
         val topicDao = db.topicDao()
-        if (topicDao.getAll().isNotEmpty()) return
+        if (topicDao.getAll().isNotEmpty()) {
+            seedSalonTopicIfMissing(db)
+            return
+        }
 
         val topics = listOf(
+            TopicEntity(13, "greetings", "Знакомство / вежливость", 0, "emoji_people"),
             TopicEntity(1, "shop", "Магазин", 1, "store"),
             TopicEntity(2, "cafe", "Кафе", 2, "local_cafe"),
             TopicEntity(3, "metro", "Метро", 3, "subway"),
@@ -32,20 +36,30 @@ object DatabaseSeeder {
             TopicEntity(10, "park", "Парк", 10, "park"),
             TopicEntity(11, "aquapark", "Аквапарк", 11, "pool"),
             TopicEntity(12, "immigration", "Миграционная служба", 12, "badge"),
-            TopicEntity(13, "greetings", "Знакомство и вежливость", 13, "emoji_people")
+            TopicEntity(14, "salon", "Парикмахерская", 13, "content_cut")
         )
 
         val lessons = shopLessons + cafeLessons + metroLessons + busLessons + taxiLessons +
             airportLessons + trainLessons + busStationLessons + beachLessons + parkLessons +
-            aquaparkLessons + immigrationLessons + greetingsLessons
+            aquaparkLessons + immigrationLessons + greetingsLessons + salonLessons
 
         val phrases = shopPhrases + cafePhrases + metroPhrases + busPhrases + taxiPhrases +
             airportPhrases + trainPhrases + busStationPhrases + beachPhrases + parkPhrases +
-            aquaparkPhrases + immigrationPhrases + greetingsPhrases
+            aquaparkPhrases + immigrationPhrases + greetingsPhrases + salonPhrases
 
         topicDao.insertAll(topics)
         db.lessonDao().insertAll(lessons)
         db.phraseDao().insertAll(phrases)
+    }
+
+    /** Добавляет тему «Парикмахерская» в уже существующую БД (без полного ресидa). */
+    private suspend fun seedSalonTopicIfMissing(db: AppDatabase) {
+        if (db.topicDao().getById(14L) != null) return
+        db.topicDao().insertAll(
+            listOf(TopicEntity(14, "salon", "Парикмахерская", 13, "content_cut"))
+        )
+        db.lessonDao().insertAll(salonLessons)
+        db.phraseDao().insertAll(salonPhrases)
     }
 
     fun createDatabase(context: Context): AppDatabase {
@@ -53,10 +67,15 @@ object DatabaseSeeder {
             context.applicationContext,
             AppDatabase::class.java,
             "korean_immersion.db"
-        ).build()
+        )
+            .addMigrations(
+                AppDatabaseMigrations.MIGRATION_1_2,
+                AppDatabaseMigrations.MIGRATION_2_3
+            )
+            .build()
     }
 
-    // ── Тема 1: Магазин ───────────────────────────────────────────────────────
+    // ── Тема 1: Магазин (13 фраз: уроки 101–102) ─────────────────────────────
 
     private val shopLessons = listOf(
         LessonEntity(
@@ -1605,14 +1624,14 @@ object DatabaseSeeder {
         )
     )
 
-    // ── Тема 13: Знакомство и вежливость ─────────────────────────────────────
+    // ── Тема 13: Знакомство / вежливость (базовый урок) ──────────────────────
 
     private val greetingsLessons = listOf(
         LessonEntity(
             id = 1301,
             topicId = 13,
             orderInTopic = 1,
-            title = "Приветствие и прощание",
+            title = "Базовые фразы: приветствие и вежливость",
             introAudioUrl = "asset:///audio/greetings/intro_lesson1.mp3",
             durationTargetMin = 15
         ),
@@ -1620,20 +1639,21 @@ object DatabaseSeeder {
             id = 1302,
             topicId = 13,
             orderInTopic = 2,
-            title = "Вежливость и знакомство",
+            title = "Знакомство и общение",
             introAudioUrl = "asset:///audio/greetings/intro_lesson2.mp3",
             durationTargetMin = 15
         )
     )
 
     private val greetingsPhrases = listOf(
+        // Урок 1301 — 7 базовых фраз (фундамент перед ситуативными темами)
         PhraseEntity(
             id = 130101,
             lessonId = 1301,
             koreanText = "안녕하세요.",
             koreanRomanization = "annyeonghaseyo",
             russianContext = "Здороваешься с незнакомым человеком — универсальное приветствие.",
-            russianLiteralMeaning = "«Будьте в покое» / приветствие на день",
+            russianLiteralMeaning = "«Будьте в покое»",
             audioUrlKorean = "asset:///audio/greetings/130101.mp3"
         ),
         PhraseEntity(
@@ -1660,6 +1680,7 @@ object DatabaseSeeder {
             koreanText = "감사해요.",
             koreanRomanization = "gamsahaeyo",
             russianContext = "Благодаришь за помощь или услугу — повседневный уровень вежливости.",
+            formalityLevel = "해요체",
             audioUrlKorean = "asset:///audio/greetings/130104.mp3"
         ),
         PhraseEntity(
@@ -1668,71 +1689,240 @@ object DatabaseSeeder {
             koreanText = "죄송해요.",
             koreanRomanization = "joesonghaeyo",
             russianContext = "Извиняешься — за мелкую ошибку или когда мешаешь.",
+            formalityLevel = "해요체",
             audioUrlKorean = "asset:///audio/greetings/130105.mp3"
         ),
         PhraseEntity(
             id = 130106,
             lessonId = 1301,
-            koreanText = "괜찮아요.",
-            koreanRomanization = "gwaenchanayo",
-            russianContext = "Говоришь «ничего страшного» — в ответ на извинение или предложение помощи.",
+            koreanText = "네.",
+            koreanRomanization = "ne",
+            russianContext = "Говоришь «да» — короткий ответ на вопрос или просьбу.",
             audioUrlKorean = "asset:///audio/greetings/130106.mp3"
         ),
         PhraseEntity(
             id = 130107,
             lessonId = 1301,
-            koreanText = "잠시만요.",
-            koreanRomanization = "jamsimanyo",
-            russianContext = "Просишь подождать секунду — когда отвлекаешься или ищешь что-то.",
+            koreanText = "아니요.",
+            koreanRomanization = "aniyo",
+            russianContext = "Говоришь «нет» — вежливый отказ или отрицание.",
             audioUrlKorean = "asset:///audio/greetings/130107.mp3"
         ),
+        // Урок 1302 — расширение
         PhraseEntity(
             id = 130201,
             lessonId = 1302,
-            koreanText = "만나서 반가워요.",
-            koreanRomanization = "mannaseo bangawoyo",
-            russianContext = "Говоришь при первой встрече — знакомство с новым человеком.",
+            koreanText = "괜찮아요.",
+            koreanRomanization = "gwaenchanayo",
+            russianContext = "Говоришь «ничего страшного» — в ответ на извинение или предложение помощи.",
             audioUrlKorean = "asset:///audio/greetings/130201.mp3"
         ),
         PhraseEntity(
             id = 130202,
             lessonId = 1302,
-            koreanText = "이름이 뭐예요?",
-            koreanRomanization = "ireumi mwoyeyo?",
-            russianContext = "Спрашиваешь имя собеседника при знакомстве.",
+            koreanText = "잠시만요.",
+            koreanRomanization = "jamsimanyo",
+            russianContext = "Просишь подождать секунду — когда отвлекаешься или ищешь что-то.",
             audioUrlKorean = "asset:///audio/greetings/130202.mp3"
         ),
         PhraseEntity(
             id = 130203,
             lessonId = 1302,
-            koreanText = "저는 마이클이에요.",
-            koreanRomanization = "jeoneun maikeurieyo",
-            russianContext = "Представляешься — подставь своё имя вместо «Майкл».",
+            koreanText = "만나서 반가워요.",
+            koreanRomanization = "mannaseo bangawoyo",
+            russianContext = "Говоришь при первой встрече — знакомство с новым человеком.",
             audioUrlKorean = "asset:///audio/greetings/130203.mp3"
         ),
         PhraseEntity(
             id = 130204,
             lessonId = 1302,
-            koreanText = "한국어를 배우고 있어요.",
-            koreanRomanization = "hangugeoreul baeugo isseoyo",
-            russianContext = "Объясняешь, что учишь корейский — снимает напряжение при общении.",
+            koreanText = "이름이 뭐예요?",
+            koreanRomanization = "ireumi mwoyeyo?",
+            russianContext = "Спрашиваешь имя собеседника при знакомстве.",
             audioUrlKorean = "asset:///audio/greetings/130204.mp3"
         ),
         PhraseEntity(
             id = 130205,
             lessonId = 1302,
-            koreanText = "천천히 말해 주세요.",
-            koreanRomanization = "cheoncheonhi malhae juseyo",
-            russianContext = "Просишь говорить медленнее — когда не успеваешь понять.",
+            koreanText = "저는 마이클이에요.",
+            koreanRomanization = "jeoneun maikeurieyo",
+            russianContext = "Представляешься — подставь своё имя вместо «Майкл».",
             audioUrlKorean = "asset:///audio/greetings/130205.mp3"
         ),
         PhraseEntity(
             id = 130206,
             lessonId = 1302,
+            koreanText = "한국어를 배우고 있어요.",
+            koreanRomanization = "hangugeoreul baeugo isseoyo",
+            russianContext = "Объясняешь, что учишь корейский — снимает напряжение при общении.",
+            audioUrlKorean = "asset:///audio/greetings/130206.mp3"
+        ),
+        PhraseEntity(
+            id = 130207,
+            lessonId = 1302,
+            koreanText = "천천히 말해 주세요.",
+            koreanRomanization = "cheoncheonhi malhae juseyo",
+            russianContext = "Просишь говорить медленнее — когда не успеваешь понять.",
+            audioUrlKorean = "asset:///audio/greetings/130207.mp3"
+        ),
+        PhraseEntity(
+            id = 130208,
+            lessonId = 1302,
             koreanText = "다시 한번 말해 주세요.",
             koreanRomanization = "dasi hanbeon malhae juseyo",
             russianContext = "Просишь повторить — когда не расслышал или не понял.",
-            audioUrlKorean = "asset:///audio/greetings/130206.mp3"
+            audioUrlKorean = "asset:///audio/greetings/130208.mp3"
+        )
+    )
+
+    // ── Тема 14: Парикмахерская ─────────────────────────────────────────────
+
+    private val salonLessons = listOf(
+        LessonEntity(
+            id = 1401,
+            topicId = 14,
+            orderInTopic = 1,
+            title = "Парикмахерская: запись и стрижка",
+            introAudioUrl = "asset:///audio/salon/intro_lesson1.mp3",
+            durationTargetMin = 15
+        ),
+        LessonEntity(
+            id = 1402,
+            topicId = 14,
+            orderInTopic = 2,
+            title = "Парикмахерская: стиль и уход",
+            introAudioUrl = "asset:///audio/salon/intro_lesson2.mp3",
+            durationTargetMin = 15
+        )
+    )
+
+    private val salonPhrases = listOf(
+        PhraseEntity(
+            id = 140101,
+            lessonId = 1401,
+            koreanText = "예약했어요.",
+            koreanRomanization = "yeyakhaesseoyo",
+            russianContext = "При входе в салон — говоришь, что записывался заранее (на телефоне или через приложение).",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140101.mp3"
+        ),
+        PhraseEntity(
+            id = 140102,
+            lessonId = 1401,
+            koreanText = "커트만 할게요.",
+            koreanRomanization = "keoteuman halgeyo",
+            russianContext = "Уточняешь, что нужна только стрижка — без окраски, укладки или химии.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140102.mp3"
+        ),
+        PhraseEntity(
+            id = 140103,
+            lessonId = 1401,
+            koreanText = "머리 좀 잘라 주세요.",
+            koreanRomanization = "meori jom jalla juseyo",
+            russianContext = "Самая частая просьба в парикмахерской — «подстригите, пожалуйста».",
+            russianLiteralMeaning = "«Подрежьте волосы немного»",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140103.mp3"
+        ),
+        PhraseEntity(
+            id = 140104,
+            lessonId = 1401,
+            koreanText = "조금만 다듬어 주세요.",
+            koreanRomanization = "jogeumman dadeumeo juseyo",
+            russianContext = "Когда не нужна сильная перемена — только слегка подровнять концы или форму.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140104.mp3"
+        ),
+        PhraseEntity(
+            id = 140105,
+            lessonId = 1401,
+            koreanText = "앞머리만 잘라 주세요.",
+            koreanRomanization = "apmeoriman jalla juseyo",
+            russianContext = "Просишь подстричь только чёлку — частый запрос между полноценными стрижками.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140105.mp3"
+        ),
+        PhraseEntity(
+            id = 140106,
+            lessonId = 1401,
+            koreanText = "너무 짧지 않게 해 주세요.",
+            koreanRomanization = "neomu jjapji anke hae juseyo",
+            russianContext = "Предупреждаешь мастера — боишься, что срежут слишком много.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140106.mp3"
+        ),
+        PhraseEntity(
+            id = 140107,
+            lessonId = 1401,
+            koreanText = "샴푸하고 커트해 주세요.",
+            koreanRomanization = "syampuhago keoteuhae juseyo",
+            russianContext = "Заказываешь стандарт: мытьё головы и стрижку — типичный набор в салоне.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140107.mp3"
+        ),
+        PhraseEntity(
+            id = 140201,
+            lessonId = 1402,
+            koreanText = "짧게 잘라 주세요.",
+            koreanRomanization = "jjalbge jalla juseyo",
+            russianContext = "Просишь сделать заметно короче — показываешь жестом или на фото.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140201.mp3"
+        ),
+        PhraseEntity(
+            id = 140202,
+            lessonId = 1402,
+            koreanText = "길이는 그대로 두고 다듬어 주세요.",
+            koreanRomanization = "giireun geudaero dugo dadeumeo juseyo",
+            russianContext = "Хочешь сохранить длину — только освежить форму и убрать секущиеся концы.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140202.mp3"
+        ),
+        PhraseEntity(
+            id = 140203,
+            lessonId = 1402,
+            koreanText = "레이어드로 잘라 주세요.",
+            koreanRomanization = "reieodeuro jalla juseyo",
+            russianContext = "Просишь слоистую стрижку — популярный запрос для объёма.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140203.mp3"
+        ),
+        PhraseEntity(
+            id = 140204,
+            lessonId = 1402,
+            koreanText = "드라이만 해 주세요.",
+            koreanRomanization = "deuraiman hae juseyo",
+            russianContext = "После мытья просишь только сушку и укладку феном — без стрижки.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140204.mp3"
+        ),
+        PhraseEntity(
+            id = 140205,
+            lessonId = 1402,
+            koreanText = "염색하고 싶어요.",
+            koreanRomanization = "yeomsaekhago sipeoyo",
+            russianContext = "Говоришь, что хочешь покрасить волосы — мастер уточнит оттенок и процедуру.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140205.mp3"
+        ),
+        PhraseEntity(
+            id = 140206,
+            lessonId = 1402,
+            koreanText = "펌 하고 싶어요.",
+            koreanRomanization = "peom hago sipeoyo",
+            russianContext = "Заказываешь химическую завивку (perm) — частая услуга в корейских салонах.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140206.mp3"
+        ),
+        PhraseEntity(
+            id = 140207,
+            lessonId = 1402,
+            koreanText = "마음에 들어요.",
+            koreanRomanization = "maeume deureoyo",
+            russianContext = "После стрижки благодаришь и говоришь, что результат нравится.",
+            formalityLevel = "해요체",
+            audioUrlKorean = "asset:///audio/salon/140207.mp3"
         )
     )
 }

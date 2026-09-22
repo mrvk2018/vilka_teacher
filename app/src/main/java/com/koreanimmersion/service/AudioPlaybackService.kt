@@ -7,12 +7,16 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.koreanimmersion.MainActivity
@@ -40,15 +44,22 @@ class AudioPlaybackService : MediaSessionService() {
     private var isReplayLoop = false
     private var pauseJob: Job? = null
     private var lessonId: Long? = null
+    /** Игнорируем STATE_ENDED при принудительной смене сегмента (stop/clearMediaItems). */
+    private var suppressEndedCallback = false
 
     private val _playbackState = MutableStateFlow(ServicePlaybackState())
     val playbackState: StateFlow<ServicePlaybackState> = _playbackState.asStateFlow()
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_ENDED) {
+            if (playbackState == Player.STATE_ENDED && !suppressEndedCallback) {
                 onSegmentFinished()
             }
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            Log.e(TAG, "ExoPlayer error at segment $segmentIndex: ${error.message}")
+            advanceSegment()
         }
     }
 
@@ -89,8 +100,13 @@ class AudioPlaybackService : MediaSessionService() {
     }
 
     private fun startPlayback(newSegments: List<PlaybackSegment>) {
+        if (newSegments.isEmpty()) {
+            Log.w(TAG, "startPlayback called with empty queue")
+            return
+        }
         segments = newSegments
         segmentIndex = 0
+        Log.i(TAG, "Starting playback: ${segments.size} segments, replay=$isReplayLoop")
         _playbackState.value = ServicePlaybackState(
             isPlaying = true,
             lessonId = lessonId,
@@ -99,7 +115,47 @@ class AudioPlaybackService : MediaSessionService() {
             totalSegments = segments.size
         )
         startForeground(NOTIFICATION_ID, buildNotification(isPlaying = true))
+        sendPlaybackBroadcast(ACTION_PLAYBACK_STARTED)
         playCurrentSegment()
+    }
+
+    private fun playAudioOrSkip(segment: PlaybackSegment) {
+        val url = segment.audioUrl
+        if (url.isNullOrBlank()) {
+            when (segment.type) {
+                PlaybackSegmentType.PHRASE_CONTEXT,
+                PlaybackSegmentType.SRS_REVIEW_CONTEXT,
+                PlaybackSegmentType.INTRO -> {
+                    pauseJob = serviceScope.launch {
+                        delay(2_000L)
+                        advanceSegment()
+                    }
+                }
+                else -> advanceSegment()
+            }
+        } else {
+            playMediaUrl(url)
+        }
+    }
+
+    private fun playMediaUrl(url: String) {
+        val exoPlayer = player ?: return
+        val uri = Uri.parse(url)
+        val dataSourceFactory = DefaultDataSource.Factory(this)
+        val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+            .createMediaSource(MediaItem.fromUri(uri))
+
+        suppressEndedCallback = true
+        try {
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+        } finally {
+            suppressEndedCallback = false
+        }
+
+        exoPlayer.setMediaSource(mediaSource)
+        exoPlayer.prepare()
+        exoPlayer.play()
     }
 
     private fun playCurrentSegment() {
@@ -110,6 +166,7 @@ class AudioPlaybackService : MediaSessionService() {
         }
         val segment = segments[segmentIndex]
         updateStateSegment(segment)
+        Log.d(TAG, "Segment $segmentIndex/${segments.size} type=${segment.type} url=${segment.audioUrl?.take(60)}")
 
         when (segment.type) {
             PlaybackSegmentType.PHRASE_USER_PAUSE,
@@ -119,24 +176,7 @@ class AudioPlaybackService : MediaSessionService() {
                     advanceSegment()
                 }
             }
-            PlaybackSegmentType.PHRASE_CONTEXT,
-            PlaybackSegmentType.SRS_REVIEW_CONTEXT -> {
-                pauseJob = serviceScope.launch {
-                    delay(2_000L)
-                    advanceSegment()
-                }
-            }
-            else -> {
-                val url = segment.audioUrl
-                if (url.isNullOrBlank()) {
-                    advanceSegment()
-                } else {
-                    val mediaItem = MediaItem.fromUri(Uri.parse(url))
-                    player?.setMediaItem(mediaItem)
-                    player?.prepare()
-                    player?.play()
-                }
-            }
+            else -> playAudioOrSkip(segment)
         }
     }
 
@@ -192,17 +232,31 @@ class AudioPlaybackService : MediaSessionService() {
 
     private fun stopPlayback(userInitiated: Boolean) {
         pauseJob?.cancel()
-        player?.stop()
-        player?.clearMediaItems()
+        suppressEndedCallback = true
+        try {
+            player?.stop()
+            player?.clearMediaItems()
+        } finally {
+            suppressEndedCallback = false
+        }
         if (userInitiated) {
             sendBroadcast(Intent(ACTION_USER_STOP).apply {
                 setPackage(packageName)
                 putExtra(EXTRA_LESSON_ID, lessonId ?: -1L)
             })
         }
+        sendPlaybackBroadcast(ACTION_PLAYBACK_STOPPED)
         _playbackState.value = ServicePlaybackState()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun sendPlaybackBroadcast(action: String) {
+        sendBroadcast(Intent(action).apply {
+            setPackage(packageName)
+            putExtra(EXTRA_LESSON_ID, lessonId ?: -1L)
+            putExtra(EXTRA_REPLAY_LOOP, isReplayLoop)
+        })
     }
 
     private fun updateStateSegment(segment: PlaybackSegment) {
@@ -299,6 +353,7 @@ class AudioPlaybackService : MediaSessionService() {
     )
 
     companion object {
+        private const val TAG = "AudioPlaybackService"
         const val CHANNEL_ID = "lesson_playback"
         const val NOTIFICATION_ID = 1001
         const val ACTION_START = "com.koreanimmersion.action.START"
@@ -307,6 +362,8 @@ class AudioPlaybackService : MediaSessionService() {
         const val ACTION_STOP = "com.koreanimmersion.action.STOP"
         const val ACTION_CYCLE_COMPLETED = "com.koreanimmersion.action.CYCLE_COMPLETED"
         const val ACTION_USER_STOP = "com.koreanimmersion.action.USER_STOP"
+        const val ACTION_PLAYBACK_STARTED = "com.koreanimmersion.action.PLAYBACK_STARTED"
+        const val ACTION_PLAYBACK_STOPPED = "com.koreanimmersion.action.PLAYBACK_STOPPED"
         const val EXTRA_SEGMENTS = "extra_segments"
         const val EXTRA_LESSON_ID = "extra_lesson_id"
         const val EXTRA_REPLAY_LOOP = "extra_replay_loop"

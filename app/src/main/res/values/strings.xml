@@ -9,7 +9,67 @@
     <string name="action_pause">Пауза</string>
     <string name="action_stop">Стоп</string>
     <string name="exam_prompt_title">Проверить усвоение?</string>
-    <string name="exam_prompt_message">Урок прослушан полностью. Хочешь проверить, как усвоил материал?</string>
+    <string name="exam_prompt_message">Урок прослушан. Проверь себя: услышишь корейскую фразу и выберешь перевод на русском.</string>
     <string name="exam_prompt_yes">Да, пройти экзамен</string>
     <string name="exam_prompt_later">Позже</string>
+    <string name="exam_loading">Загрузка экзамена…</string>
+    <string name="exam_question_progress">Вопрос %1$d из %2$d</string>
+    <string name="exam_listen_instruction">Послушай корейскую фразу и выбери правильный перевод</string>
+    <string name="exam_no_hangul_hint">Текст фразы не показываем — только звук. Варианты ответа на русском.</string>
+    <string name="exam_replay_audio">Прослушать ещё раз</string>
+    <string name="exam_result_title">Результат экзамена</string>
+    <string name="exam_result_score">%1$d из %2$d правильно</string>
+    <string name="exam_result_grade">Оценка: %1$d из 5</string>
+    <string name="exam_done">Готово</string>
+    <string name="exam_start_button">Пройти экзамен</string>
+
+    <string name="nav_lessons">Уроки</string>
+    <string name="nav_progress">Прогресс</string>
+
+    <string name="intro_screen_title_default">Ознакомление</string>
+    <string name="intro_stage_subtitle">Подэтап 1: прослушайте фразы темы. Если аудиофайла нет — используется корейский TTS на устройстве.</string>
+    <string name="intro_start_audio_lesson">Запустить аудио-урок</string>
+    <string name="intro_open_stage">Ознакомление (этап 1)</string>
+
+    <string name="channel_intro_playback_name">Ознакомление с фразами</string>
+    <string name="channel_intro_playback_desc">Фоновое воспроизведение фраз темы</string>
+    <string name="intro_notification_title_default">Корейская фраза</string>
+    <string name="intro_notification_text_default">Перевод</string>
+    <string name="intro_notification_subtext">Подэтап 1 · Ознакомление</string>
+    <string name="action_previous">Назад</string>
+    <string name="action_next">Вперёд</string>
+
+    <string name="speaking_screen_title_default">Говорение</string>
+    <string name="speaking_stage_subtitle">Подэтап 2: произнесите фразу вслух. Совпадение ≥ 80%% — зачёт.</string>
+    <string name="speaking_open_stage">Говорение (этап 2)</string>
+    <string name="speaking_play_phrase">Прослушать образец</string>
+    <string name="speaking_hold_or_tap">Удерживайте или нажмите, чтобы говорить</string>
+    <string name="speaking_listening">Слушаю…</string>
+    <string name="speaking_mic_permission_hint">Нужно разрешение микрофона для распознавания речи</string>
+    <string name="speaking_feedback_success">Отлично! Произношение принято.</string>
+    <string name="speaking_feedback_try_again">Попробуйте ещё раз (совпадение %1$d%%)</string>
+    <string name="speaking_next_phrase">Следующая фраза</string>
+    <string name="speaking_try_again">Повторить</string>
+    <string name="speaking_phrase_progress">Фраза %1$d из %2$d</string>
+    <string name="speaking_progress_learned">Заучено фраз: %1$d</string>
+
+    <string name="stt_error_not_available">Распознавание речи недоступно на устройстве</string>
+    <string name="stt_error_audio">Ошибка записи аудио</string>
+    <string name="stt_error_permission">Нет разрешения на микрофон</string>
+    <string name="stt_error_network">Ошибка сети распознавания</string>
+    <string name="stt_error_no_match">Речь не распознана</string>
+    <string name="stt_error_timeout">Время ожидания речи истекло</string>
+    <string name="stt_error_busy">Распознаватель занят</string>
+    <string name="stt_error_unknown">Ошибка STT (код %1$d)</string>
+
+    <string name="llm_dialog_title_default">Диалог с учителем</string>
+    <string name="llm_dialog_open_stage">Живой диалог (этап 3)</string>
+    <string name="llm_dialog_stage_subtitle">Подэтап 3: практикуйте тему в чате с ИИ-учителем. Ответы озвучиваются корейским TTS.</string>
+    <string name="llm_dialog_input_hint">Напишите по-корейски или нажмите микрофон…</string>
+    <string name="llm_dialog_send">Отправить</string>
+    <string name="llm_dialog_mic">Голосовой ввод</string>
+    <string name="llm_dialog_empty_hint">Начните диалог — задайте вопрос или попробуйте фразу из темы.</string>
+    <string name="llm_dialog_error_empty">Введите сообщение</string>
+    <string name="llm_dialog_error_server">Не удалось связаться с сервером учителя. Запустите Python-сервер и Ollama на ПК.</string>
+    <string name="llm_dialog_error_timeout">Сервер не ответил вовремя. Проверьте модель qwen2.5 в Ollama.</string>
 </resources>

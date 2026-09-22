@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.koreanimmersion.KoreanImmersionApp
+import com.koreanimmersion.data.local.entity.ExamAttemptEntity
 import com.koreanimmersion.data.local.entity.LessonEntity
 import com.koreanimmersion.data.local.entity.TopicEntity
 import com.koreanimmersion.data.repository.ContentRepository
@@ -51,20 +52,30 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
     val uiState: StateFlow<LessonPlayerUiState> = _uiState.asStateFlow()
 
     private var pendingExamPromptLessonId: Long? = null
-    private var pendingStopTimestamp: Long? = null
     private var screenWasLocked = false
 
     private val playbackReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
+                AudioPlaybackService.ACTION_PLAYBACK_STARTED -> {
+                    val replay = intent.getBooleanExtra(AudioPlaybackService.EXTRA_REPLAY_LOOP, false)
+                    _uiState.value = _uiState.value.copy(isPlaying = true, isReplayLoop = replay)
+                }
+                AudioPlaybackService.ACTION_PLAYBACK_STOPPED -> {
+                    _uiState.value = _uiState.value.copy(isPlaying = false, isReplayLoop = false)
+                }
                 AudioPlaybackService.ACTION_CYCLE_COMPLETED -> {
                     val lessonId = intent.getLongExtra(AudioPlaybackService.EXTRA_LESSON_ID, -1L)
                     if (lessonId > 0) {
                         viewModelScope.launch {
                             progressRepo.recordFullPlaythrough(lessonId)
                             _uiState.value = _uiState.value.copy(
-                                fullPlaythroughsRecorded = _uiState.value.fullPlaythroughsRecorded + 1
+                                fullPlaythroughsRecorded = _uiState.value.fullPlaythroughsRecorded + 1,
+                                examAvailable = true
                             )
+                            if (!_uiState.value.isReplayLoop) {
+                                offerExamPrompt(lessonId)
+                            }
                         }
                     }
                 }
@@ -73,9 +84,12 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
                     if (lessonId > 0) {
                         viewModelScope.launch {
                             val progress = progressRepo.recordStopPressed(lessonId)
-                            pendingExamPromptLessonId = lessonId
-                            pendingStopTimestamp = progress.lastStopPressedAt
-                            maybeShowExamPrompt()
+                            _uiState.value = _uiState.value.copy(
+                                examAvailable = progress.examAvailable
+                            )
+                            if (progress.examAvailable) {
+                                offerExamPrompt(lessonId)
+                            }
                         }
                     }
                     _uiState.value = _uiState.value.copy(isPlaying = false, isReplayLoop = false)
@@ -86,6 +100,8 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         val filter = IntentFilter().apply {
+            addAction(AudioPlaybackService.ACTION_PLAYBACK_STARTED)
+            addAction(AudioPlaybackService.ACTION_PLAYBACK_STOPPED)
             addAction(AudioPlaybackService.ACTION_CYCLE_COMPLETED)
             addAction(AudioPlaybackService.ACTION_USER_STOP)
         }
@@ -111,10 +127,13 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
                 com.koreanimmersion.data.local.DatabaseSeeder.DEFAULT_USER_ID,
                 phraseIds
             )
+            val progress = progressRepo.getProgress(lessonId)
             _uiState.value = _uiState.value.copy(
                 lessonId = lessonId,
                 lessonTitle = lesson?.title,
-                segments = queue ?: emptyList()
+                segments = queue ?: emptyList(),
+                isQueueReady = queue != null && queue.isNotEmpty(),
+                examAvailable = progress?.examAvailable == true
             )
         }
     }
@@ -123,6 +142,8 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
         val state = _uiState.value
         val segments = state.segments
         if (segments.isEmpty()) return
+
+        _uiState.value = state.copy(isPlaying = true, isReplayLoop = replayLoop)
 
         val intent = Intent(appContext, AudioPlaybackService::class.java).apply {
             action = AudioPlaybackService.ACTION_START
@@ -134,7 +155,6 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
             putExtra(AudioPlaybackService.EXTRA_REPLAY_LOOP, replayLoop)
         }
         ContextCompat.startForegroundService(appContext, intent)
-        _uiState.value = state.copy(isPlaying = true, isReplayLoop = replayLoop)
     }
 
     fun stopPlayback() {
@@ -152,37 +172,56 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
     fun onScreenUnlocked() {
         if (screenWasLocked) {
             screenWasLocked = false
-            maybeShowExamPrompt()
+            pendingExamPromptLessonId?.let { offerExamPrompt(it) }
         }
     }
 
-    private fun maybeShowExamPrompt() {
-        val lessonId = pendingExamPromptLessonId ?: return
-        val stopAt = pendingStopTimestamp ?: return
+    private fun offerExamPrompt(lessonId: Long) {
+        if (screenWasLocked) {
+            pendingExamPromptLessonId = lessonId
+            return
+        }
         viewModelScope.launch {
-            val shouldShow = progressRepo.shouldShowExamPrompt(lessonId, stopAt)
-            if (shouldShow && !screenWasLocked) {
+            if (progressRepo.shouldShowExamPrompt(lessonId)) {
                 _uiState.value = _uiState.value.copy(
                     showExamPrompt = true,
                     examPromptLessonId = lessonId
                 )
+                pendingExamPromptLessonId = null
             }
         }
     }
 
-    fun dismissExamPrompt() {
+    fun startExamFromLesson() {
+        val lessonId = _uiState.value.lessonId ?: return
         viewModelScope.launch {
-            _uiState.value.examPromptLessonId?.let { progressRepo.clearExamPrompt(it) }
-            _uiState.value = _uiState.value.copy(showExamPrompt = false, examPromptLessonId = null)
-            pendingExamPromptLessonId = null
-            pendingStopTimestamp = null
+            progressRepo.clearExamPrompt(lessonId)
+            _uiState.value = _uiState.value.copy(
+                navigateToExamLessonId = lessonId,
+                showExamPrompt = false,
+                examPromptLessonId = null,
+                examAvailable = false
+            )
         }
     }
 
+    fun dismissExamPrompt() {
+        _uiState.value = _uiState.value.copy(showExamPrompt = false, examPromptLessonId = null)
+        pendingExamPromptLessonId = null
+    }
+
     fun acceptExamPrompt() {
-        val lessonId = _uiState.value.examPromptLessonId
-        dismissExamPrompt()
-        _uiState.value = _uiState.value.copy(navigateToExamLessonId = lessonId)
+        val lessonId = _uiState.value.examPromptLessonId ?: return
+        viewModelScope.launch {
+            progressRepo.clearExamPrompt(lessonId)
+            _uiState.value = _uiState.value.copy(
+                showExamPrompt = false,
+                examPromptLessonId = null,
+                examAvailable = false,
+                navigateToExamLessonId = lessonId
+            )
+            pendingExamPromptLessonId = null
+        }
     }
 
     fun clearNavigateToExam() {
@@ -198,9 +237,11 @@ class LessonPlayerViewModel(app: Application) : AndroidViewModel(app) {
         val lessonId: Long? = null,
         val lessonTitle: String? = null,
         val segments: List<PlaybackSegment> = emptyList(),
+        val isQueueReady: Boolean = false,
         val isPlaying: Boolean = false,
         val isReplayLoop: Boolean = false,
         val fullPlaythroughsRecorded: Int = 0,
+        val examAvailable: Boolean = false,
         val showExamPrompt: Boolean = false,
         val examPromptLessonId: Long? = null,
         val navigateToExamLessonId: Long? = null
@@ -215,24 +256,85 @@ class ManualTopicViewModel(app: Application) : AndroidViewModel(app) {
     private val _segments = MutableStateFlow<List<PlaybackSegment>>(emptyList())
     val segments: StateFlow<List<PlaybackSegment>> = _segments.asStateFlow()
 
-    fun loadTopic(topicId: Long) {
-        viewModelScope.launch {
-            _segments.value = contentRepo.buildManualTopicQueue(topicId)
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
+    private val _isReplayLoop = MutableStateFlow(false)
+    val isReplayLoop: StateFlow<Boolean> = _isReplayLoop.asStateFlow()
+
+    private val _isQueueReady = MutableStateFlow(false)
+    val isQueueReady: StateFlow<Boolean> = _isQueueReady.asStateFlow()
+
+    private val playbackReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                AudioPlaybackService.ACTION_PLAYBACK_STARTED -> {
+                    _isPlaying.value = true
+                    _isReplayLoop.value = intent.getBooleanExtra(
+                        AudioPlaybackService.EXTRA_REPLAY_LOOP, false
+                    )
+                }
+                AudioPlaybackService.ACTION_PLAYBACK_STOPPED,
+                AudioPlaybackService.ACTION_USER_STOP -> {
+                    _isPlaying.value = false
+                    _isReplayLoop.value = false
+                }
+            }
         }
     }
 
-    fun startManualPlayback(topicId: Long) {
+    init {
+        val filter = IntentFilter().apply {
+            addAction(AudioPlaybackService.ACTION_PLAYBACK_STARTED)
+            addAction(AudioPlaybackService.ACTION_PLAYBACK_STOPPED)
+            addAction(AudioPlaybackService.ACTION_USER_STOP)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.registerReceiver(
+                appContext, playbackReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            appContext.registerReceiver(playbackReceiver, filter)
+        }
+    }
+
+    fun loadTopic(topicId: Long) {
+        viewModelScope.launch {
+            _isQueueReady.value = false
+            _segments.value = contentRepo.buildManualTopicQueue(topicId)
+            _isQueueReady.value = _segments.value.isNotEmpty()
+        }
+    }
+
+    fun startPlayback(replayLoop: Boolean = false) {
         val segments = _segments.value
         if (segments.isEmpty()) return
+
+        _isPlaying.value = true
+        _isReplayLoop.value = replayLoop
+
         val intent = Intent(appContext, AudioPlaybackService::class.java).apply {
             action = AudioPlaybackService.ACTION_START
             putParcelableArrayListExtra(
                 AudioPlaybackService.EXTRA_SEGMENTS,
                 ArrayList(segments.map { PlaybackSegmentParcelable.fromDomain(it) })
             )
-            putExtra(AudioPlaybackService.EXTRA_REPLAY_LOOP, true)
+            putExtra(AudioPlaybackService.EXTRA_REPLAY_LOOP, replayLoop)
         }
         ContextCompat.startForegroundService(appContext, intent)
+    }
+
+    fun stopPlayback() {
+        val intent = Intent(appContext, AudioPlaybackService::class.java).apply {
+            action = AudioPlaybackService.ACTION_STOP
+        }
+        appContext.startService(intent)
+    }
+
+    override fun onCleared() {
+        appContext.unregisterReceiver(playbackReceiver)
+        super.onCleared()
     }
 }
 
@@ -244,7 +346,7 @@ class ProgressViewModel(app: Application) : AndroidViewModel(app) {
     val lessonScores = progressRepo.observeLessonScores()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun observeExamHistory(lessonId: Long) =
+    fun observeExamHistory(lessonId: Long): kotlinx.coroutines.flow.StateFlow<List<ExamAttemptEntity>> =
         progressRepo.observeExamHistory(lessonId)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -256,7 +358,7 @@ class ProgressViewModel(app: Application) : AndroidViewModel(app) {
 class ExamViewModel(app: Application) : AndroidViewModel(app) {
 
     private val examRepo = KoreanImmersionApp.instance.examRepository
-    private val contentRepo = KoreanImmersionApp.instance.contentRepository
+    private val progressRepo = KoreanImmersionApp.instance.progressRepository
 
     private val _uiState = MutableStateFlow(ExamUiState())
     val uiState: StateFlow<ExamUiState> = _uiState.asStateFlow()
@@ -264,12 +366,11 @@ class ExamViewModel(app: Application) : AndroidViewModel(app) {
     fun loadExam(lessonId: Long) {
         viewModelScope.launch {
             val questions = examRepo.buildMcQuestions(lessonId)
-            val phrases = contentRepo.getPhrasesForLesson(lessonId)
             _uiState.value = ExamUiState(
                 lessonId = lessonId,
                 mcQuestions = questions,
-                sttPhrases = phrases,
-                phase = ExamPhase.MULTIPLE_CHOICE
+                phase = if (questions.isEmpty()) ExamPhase.RESULT else ExamPhase.MULTIPLE_CHOICE,
+                totalCount = questions.size
             )
         }
     }
@@ -282,21 +383,30 @@ class ExamViewModel(app: Application) : AndroidViewModel(app) {
             selectedIndex = selectedIndex,
             correct = selectedIndex == question.correctIndex
         )
+        val answers = state.mcAnswers + answer
+        val isLast = questionIndex + 1 >= state.mcQuestions.size
         _uiState.value = state.copy(
-            mcAnswers = state.mcAnswers + answer,
-            currentMcIndex = questionIndex + 1,
-            phase = if (questionIndex + 1 >= state.mcQuestions.size) ExamPhase.STT else ExamPhase.MULTIPLE_CHOICE
+            mcAnswers = answers,
+            currentMcIndex = questionIndex + 1
         )
+        if (isLast) {
+            finishExam(answers)
+        }
     }
 
-    fun finishExam() {
+    private fun finishExam(answers: List<com.koreanimmersion.domain.exam.ExamAnswerRecord>) {
         viewModelScope.launch {
             val state = _uiState.value
             val lessonId = state.lessonId ?: return@launch
-            val attempt = examRepo.saveAttempt(lessonId, state.mcAnswers)
+            val attempt = examRepo.saveAttempt(lessonId, answers)
+            progressRepo.clearExamPrompt(lessonId)
+            val correct = answers.count { it.correct }
             _uiState.value = state.copy(
+                mcAnswers = answers,
                 phase = ExamPhase.RESULT,
-                finalScore = attempt.score
+                finalScore = attempt.score,
+                correctCount = correct,
+                totalCount = answers.size
             )
         }
     }
@@ -306,26 +416,11 @@ class ExamViewModel(app: Application) : AndroidViewModel(app) {
         val mcQuestions: List<com.koreanimmersion.domain.exam.McQuestion> = emptyList(),
         val mcAnswers: List<com.koreanimmersion.domain.exam.ExamAnswerRecord> = emptyList(),
         val currentMcIndex: Int = 0,
-        val sttPhrases: List<com.koreanimmersion.data.local.entity.PhraseEntity> = emptyList(),
-        val currentSttIndex: Int = 0,
-        val sttResults: Map<Long, Boolean> = emptyMap(),
         val phase: ExamPhase = ExamPhase.LOADING,
-        val finalScore: Int? = null
+        val finalScore: Int? = null,
+        val correctCount: Int? = null,
+        val totalCount: Int? = null
     )
 
-    enum class ExamPhase { LOADING, MULTIPLE_CHOICE, STT, RESULT }
-
-    fun recordSttResult(phraseId: Long, heard: Boolean) {
-        val state = _uiState.value
-        val newResults = state.sttResults + (phraseId to heard)
-        val nextIndex = state.currentSttIndex + 1
-        _uiState.value = state.copy(
-            sttResults = newResults,
-            currentSttIndex = nextIndex,
-            phase = if (nextIndex >= state.sttPhrases.size) ExamPhase.RESULT else ExamPhase.STT
-        )
-        if (nextIndex >= state.sttPhrases.size) {
-            finishExam()
-        }
-    }
+    enum class ExamPhase { LOADING, MULTIPLE_CHOICE, RESULT }
 }

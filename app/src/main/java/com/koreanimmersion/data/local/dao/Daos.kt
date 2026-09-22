@@ -58,6 +58,9 @@ interface PhraseDao {
     @Query("SELECT p.* FROM phrases p INNER JOIN lessons l ON p.lessonId = l.id WHERE l.topicId = :topicId ORDER BY l.orderInTopic, p.id")
     suspend fun getByTopic(topicId: Long): List<PhraseEntity>
 
+    @Query("SELECT * FROM phrases ORDER BY id ASC")
+    suspend fun getAll(): List<PhraseEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(phrases: List<PhraseEntity>)
 }

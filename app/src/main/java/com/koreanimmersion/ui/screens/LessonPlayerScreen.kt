@@ -128,6 +128,15 @@ fun LessonPlayerScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
 
+            if (!state.isQueueReady) {
+                Text(
+                    text = "Подготовка очереди и озвучки…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -136,7 +145,8 @@ fun LessonPlayerScreen(
                 if (!state.isPlaying) {
                     FilledTonalButton(
                         onClick = { viewModel.startPlayback(replayLoop = false) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = state.isQueueReady
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                         Text(" Старт")
@@ -153,7 +163,7 @@ fun LessonPlayerScreen(
                 }
                 OutlinedButton(
                     onClick = { viewModel.stopPlayback() },
-                    enabled = state.isPlaying || state.isReplayLoop
+                    enabled = state.isPlaying
                 ) {
                     Icon(Icons.Default.Stop, contentDescription = null)
                     Text(" Stop")
@@ -167,6 +177,16 @@ fun LessonPlayerScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+
+            if (state.examAvailable && !state.isPlaying) {
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { viewModel.startExamFromLesson() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.exam_start_button))
+                }
             }
         }
     }

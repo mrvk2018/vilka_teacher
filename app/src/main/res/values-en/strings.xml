@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KoreanImmersion</string>
+    <string name="nav_lessons">Lessons</string>
+    <string name="nav_progress">Progress</string>
+    <string name="intro_screen_title_default">Introduction</string>
+    <string name="intro_stage_subtitle">Sub-stage 1: listen to topic phrases. If no audio file is set, Korean TTS is used on device.</string>
+    <string name="intro_start_audio_lesson">Start audio lesson</string>
+    <string name="intro_open_stage">Introduction (stage 1)</string>
+    <string name="channel_intro_playback_name">Phrase introduction</string>
+    <string name="channel_intro_playback_desc">Background playback of topic phrases</string>
+    <string name="intro_notification_title_default">Korean phrase</string>
+    <string name="intro_notification_text_default">Translation</string>
+    <string name="intro_notification_subtext">Sub-stage 1 · Introduction</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_next">Next</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_stop">Stop</string>
+
+    <string name="speaking_screen_title_default">Speaking</string>
+    <string name="speaking_stage_subtitle">Sub-stage 2: say the phrase aloud. ≥ 80%% match counts as pass.</string>
+    <string name="speaking_open_stage">Speaking (stage 2)</string>
+    <string name="speaking_play_phrase">Play sample</string>
+    <string name="speaking_hold_or_tap">Hold or tap to speak</string>
+    <string name="speaking_listening">Listening…</string>
+    <string name="speaking_mic_permission_hint">Microphone permission is required for speech recognition</string>
+    <string name="speaking_feedback_success">Great! Pronunciation accepted.</string>
+    <string name="speaking_feedback_try_again">Try again (%1$d%% match)</string>
+    <string name="speaking_next_phrase">Next phrase</string>
+    <string name="speaking_try_again">Try again</string>
+    <string name="speaking_phrase_progress">Phrase %1$d of %2$d</string>
+    <string name="speaking_progress_learned">Phrases learned: %1$d</string>
+
+    <string name="stt_error_not_available">Speech recognition is not available on this device</string>
+    <string name="stt_error_audio">Audio recording error</string>
+    <string name="stt_error_permission">Microphone permission denied</string>
+    <string name="stt_error_network">Speech recognition network error</string>
+    <string name="stt_error_no_match">No speech recognized</string>
+    <string name="stt_error_timeout">Speech input timed out</string>
+    <string name="stt_error_busy">Speech recognizer is busy</string>
+    <string name="stt_error_unknown">STT error (code %1$d)</string>
+
+    <string name="llm_dialog_title_default">Teacher chat</string>
+    <string name="llm_dialog_open_stage">Live dialog (stage 3)</string>
+    <string name="llm_dialog_stage_subtitle">Sub-stage 3: practice the topic in chat with an AI teacher. Replies are read aloud with Korean TTS.</string>
+    <string name="llm_dialog_input_hint">Type in Korean or tap the microphone…</string>
+    <string name="llm_dialog_send">Send</string>
+    <string name="llm_dialog_mic">Voice input</string>
+    <string name="llm_dialog_empty_hint">Start the dialog — ask a question or try a phrase from the topic.</string>
+    <string name="llm_dialog_error_empty">Enter a message</string>
+    <string name="llm_dialog_error_server">Could not reach the teacher server. Start the Python server and Ollama on your PC.</string>
+    <string name="llm_dialog_error_timeout">The server did not respond in time. Check the qwen2.5 model in Ollama.</string>
+</resources>

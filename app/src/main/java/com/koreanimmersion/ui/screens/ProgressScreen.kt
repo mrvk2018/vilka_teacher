@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.koreanimmersion.data.local.entity.ExamAttemptEntity
 import com.koreanimmersion.ui.viewmodel.ProgressViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -111,8 +112,8 @@ fun ExamHistoryList(
     lessonId: Long,
     viewModel: ProgressViewModel
 ) {
-    val history = remember(lessonId) { viewModel.observeExamHistory(lessonId) }
-    val attempts by history.collectAsState()
+    val historyFlow = remember(lessonId) { viewModel.observeExamHistory(lessonId) }
+    val attempts by historyFlow.collectAsState()
     val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale("ru"))
 
     LazyColumn {

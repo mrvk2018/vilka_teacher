@@ -4,6 +4,10 @@
 /.idea
 .DS_Store
 /build
+**/build/
+.kotlin/
+hs_err_*.log
+replay_*.log
 /captures
 .externalNativeBuild
 .cxx

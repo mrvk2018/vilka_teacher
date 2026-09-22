@@ -9,6 +9,9 @@ import com.koreanimmersion.data.local.entity.PhraseEntity
 import com.koreanimmersion.data.local.entity.PhraseSrsEntity
 import com.koreanimmersion.data.local.entity.TopicEntity
 import com.koreanimmersion.data.local.entity.UserLessonProgressEntity
+import com.koreanimmersion.core.database.LearnedPhrasesJson
+import com.koreanimmersion.core.database.entity.UserProgressEntity
+import com.koreanimmersion.core.database.model.LearningSubStage
 import com.koreanimmersion.domain.exam.ExamAnswerRecord
 import com.koreanimmersion.domain.exam.ExamScoring
 import com.koreanimmersion.domain.exam.ExamTriggerLogic
@@ -16,9 +19,13 @@ import com.koreanimmersion.domain.exam.McQuestion
 import com.koreanimmersion.domain.playback.LessonPlaybackQueueBuilder
 import com.koreanimmersion.domain.playback.PlaybackSegment
 import com.koreanimmersion.domain.srs.SrsScheduler
+import com.koreanimmersion.tts.PhraseTtsCacheManager
 import kotlinx.coroutines.flow.Flow
 
-class ContentRepository(private val db: AppDatabase) {
+class ContentRepository(
+    private val db: AppDatabase,
+    private val ttsCacheManager: PhraseTtsCacheManager
+) {
 
     fun observeTopics(): Flow<List<TopicEntity>> = db.topicDao().observeAll()
 
@@ -44,16 +51,23 @@ class ContentRepository(private val db: AppDatabase) {
         val lesson = getLesson(lessonId) ?: return null
         val newPhrases = getPhrasesForLesson(lessonId)
         val srsPhrases = getDueSrsPhrases(userId)
-        return LessonPlaybackQueueBuilder.buildLessonQueue(
+        val rawQueue = LessonPlaybackQueueBuilder.buildLessonQueue(
             introAudioUrl = lesson.introAudioUrl,
             newPhrases = newPhrases,
             srsPhrases = srsPhrases
         )
+        return resolvePhraseTts(rawQueue)
     }
 
     suspend fun buildManualTopicQueue(topicId: Long): List<PlaybackSegment> {
         val phrases = getPhrasesForTopic(topicId)
-        return LessonPlaybackQueueBuilder.buildManualTopicQueue(phrases)
+        val rawQueue = LessonPlaybackQueueBuilder.buildManualTopicQueue(phrases)
+        return resolvePhraseTts(rawQueue)
+    }
+
+    private suspend fun resolvePhraseTts(segments: List<PlaybackSegment>): List<PlaybackSegment> {
+        val phrasesById = ttsCacheManager.collectPhrasesForSegments(segments)
+        return ttsCacheManager.resolvePlaybackSegments(segments, phrasesById)
     }
 
     suspend fun initializeSrsForNewPhrases(userId: String, phraseIds: List<Long>) {
@@ -104,16 +118,48 @@ class ProgressRepository(private val db: AppDatabase) {
         db.userLessonProgressDao().upsert(ExamTriggerLogic.clearExamAvailable(current))
     }
 
-    suspend fun shouldShowExamPrompt(lessonId: Long, stopPressedAt: Long): Boolean {
+    suspend fun shouldShowExamPrompt(lessonId: Long): Boolean {
         val progress = getProgress(lessonId) ?: return false
-        return ExamTriggerLogic.evaluateAfterStop(progress, stopPressedAt).shouldShowPrompt
+        return progress.examAvailable
     }
 
-    fun observeExamHistory(lessonId: Long) =
-        db.examAttemptDao().observeByLesson(userId, lessonId)
+    suspend fun markCoursePhraseLearned(
+        topicId: Long,
+        topicKey: String?,
+        phraseId: Long
+    ) {
+        val existing = db.userProgressDao().get(userId)
+        val learned = LearnedPhrasesJson.decode(existing?.learnedPhraseIdsJson ?: "[]")
+            .toMutableSet()
+        learned.add(phraseId)
+        val entity = (existing ?: UserProgressEntity(userId = userId)).copy(
+            currentTopicId = topicId,
+            currentTopicKey = topicKey ?: existing?.currentTopicKey,
+            currentSubStage = LearningSubStage.SPEAKING.code,
+            learnedPhraseIdsJson = LearnedPhrasesJson.encode(learned.toList())
+        )
+        db.userProgressDao().upsert(entity)
+    }
+
+    fun observeUserProgress() = db.userProgressDao().observe(userId)
+
+    suspend fun getUserProgress(): UserProgressEntity? = db.userProgressDao().get(userId)
+
+    suspend fun enterLlmDialogStage(topicId: Long, topicKey: String?) {
+        val existing = db.userProgressDao().get(userId)
+        val entity = (existing ?: UserProgressEntity(userId = userId)).copy(
+            currentTopicId = topicId,
+            currentTopicKey = topicKey ?: existing?.currentTopicKey,
+            currentSubStage = LearningSubStage.LLM_DIALOG.code
+        )
+        db.userProgressDao().upsert(entity)
+    }
 }
 
-class ExamRepository(private val db: AppDatabase) {
+class ExamRepository(
+    private val db: AppDatabase,
+    private val ttsCacheManager: PhraseTtsCacheManager
+) {
 
     private val userId get() = DatabaseSeeder.DEFAULT_USER_ID
 
@@ -124,14 +170,16 @@ class ExamRepository(private val db: AppDatabase) {
         )
         return phrases.map { target ->
             val distractors = allPhrases
-                .filter { it.id != target.id }
+                .filter { it.id != target.id && it.russianContext != target.russianContext }
                 .shuffled()
                 .take(3)
                 .map { it.russianContext }
             val options = (distractors + target.russianContext).shuffled()
+            val audioUri = ttsCacheManager.ensureCachedKo(target.id, target.koreanText)
             McQuestion(
                 phraseId = target.id,
-                questionText = "Когда используешь: «${target.koreanText}»?",
+                koreanRomanization = target.koreanRomanization,
+                audioUrl = audioUri?.toString(),
                 options = options,
                 correctIndex = options.indexOf(target.russianContext)
             )

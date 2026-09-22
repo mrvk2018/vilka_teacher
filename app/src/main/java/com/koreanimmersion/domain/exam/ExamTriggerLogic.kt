@@ -57,7 +57,8 @@ object ExamTriggerLogic {
             timesCompletedFullPlaythrough = 1
         )
         return base.copy(
-            timesCompletedFullPlaythrough = base.timesCompletedFullPlaythrough + 1
+            timesCompletedFullPlaythrough = base.timesCompletedFullPlaythrough + 1,
+            examAvailable = true
         )
     }
 

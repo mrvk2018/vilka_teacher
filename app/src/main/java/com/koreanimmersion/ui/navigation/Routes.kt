@@ -8,4 +8,7 @@ object NavRoutes {
     fun lesson(lessonId: Long) = "lesson/$lessonId"
     fun manual(topicId: Long) = "manual/$topicId"
     fun exam(lessonId: Long) = "exam/$lessonId"
+    fun introduction(topicId: Long) = "introduction/$topicId"
+    fun speaking(topicId: Long) = "speaking/$topicId"
+    fun llmDialog(topicId: Long) = "llm_dialog/$topicId"
 }
