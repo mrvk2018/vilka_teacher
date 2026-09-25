@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -41,6 +42,11 @@ class PhrasePlayerManager(
                     if (playbackState == Player.STATE_ENDED && !suppressEnded) {
                         skipNext(autoFromEnd = true)
                     }
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    Log.e(TAG, "Playback error: ${error.message}", error)
+                    skipNext(autoFromEnd = true)
                 }
             }
         )

@@ -3,6 +3,7 @@ package com.koreanimmersion.tts
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.koreanimmersion.core.database.dao.ContentPhraseDao
 import com.koreanimmersion.data.local.dao.PhraseDao
 import com.koreanimmersion.data.local.entity.PhraseEntity
 import com.koreanimmersion.domain.playback.PlaybackSegment
@@ -22,6 +23,7 @@ import java.util.Locale
 class PhraseTtsCacheManager(
     context: Context,
     private val phraseDao: PhraseDao,
+    private val coursePhraseDao: ContentPhraseDao,
     private val ttsEngine: LocaleTtsEngine
 ) {
 
@@ -77,8 +79,10 @@ class PhraseTtsCacheManager(
             return@withContext
         }
 
-        val phrases = phraseDao.getAll()
-        val total = phrases.size * 2
+        val legacyPhrases = phraseDao.getAll()
+        val coursePhrases = coursePhraseDao.getAll()
+        val phrases = legacyPhrases
+        val total = phrases.size * 2 + coursePhrases.size
         _preloadState.value = PreloadState(isRunning = true, total = total)
 
         var completed = 0
@@ -89,6 +93,11 @@ class PhraseTtsCacheManager(
             _preloadState.value = PreloadState(isRunning = true, completed = completed + failed, total = total, failed = failed)
 
             if (ensureCachedRu("ctx${phrase.id}", phrase.russianContext) != null) completed++ else failed++
+            _preloadState.value = PreloadState(isRunning = true, completed = completed + failed, total = total, failed = failed)
+        }
+
+        coursePhrases.forEach { phrase ->
+            if (ensureCachedKo(phrase.id, phrase.koreanText) != null) completed++ else failed++
             _preloadState.value = PreloadState(isRunning = true, completed = completed + failed, total = total, failed = failed)
         }
 

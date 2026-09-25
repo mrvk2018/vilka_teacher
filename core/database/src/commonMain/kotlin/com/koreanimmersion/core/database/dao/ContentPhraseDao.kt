@@ -27,6 +27,9 @@ interface ContentPhraseDao {
     )
     suspend fun getByTopicId(topicId: Long): List<PhraseEntity>
 
+    @Query("SELECT * FROM course_phrases ORDER BY topic_id ASC, order_index ASC")
+    suspend fun getAll(): List<PhraseEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(phrases: List<PhraseEntity>)
 }

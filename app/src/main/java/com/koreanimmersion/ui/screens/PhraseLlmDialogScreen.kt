@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -140,33 +142,19 @@ fun PhraseLlmDialogScreen(
                         enabled = !isSending,
                         maxLines = 4
                     )
-                    IconButton(
-                        onClick = {
-                            if (!micGranted) {
-                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
+                    LlmDialogMicButton(
+                        micGranted = micGranted,
+                        isSending = isSending,
+                        isListening = speechState is SpeechRecognitionState.Listening,
+                        onRequestPermission = {
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         },
-                        modifier = Modifier.pointerInput(micGranted, isSending) {
-                            if (!micGranted || isSending) return@pointerInput
-                            detectTapGestures(
-                                onPress = {
-                                    viewModel.startVoiceInput()
-                                    tryAwaitRelease()
-                                    viewModel.stopVoiceInput()
-                                }
-                            )
-                        }
-                    ) {
-                        Icon(
-                            Icons.Default.Mic,
-                            contentDescription = stringResource(R.string.llm_dialog_mic),
-                            tint = when (speechState) {
-                                SpeechRecognitionState.Listening ->
-                                    MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    }
+                        onPressStart = {
+                            viewModel.clearError()
+                            viewModel.startVoiceInput()
+                        },
+                        onPressEnd = { viewModel.stopVoiceInput() }
+                    )
                     IconButton(
                         onClick = { viewModel.sendMessage() },
                         enabled = input.isNotBlank() && !isSending
@@ -184,13 +172,21 @@ fun PhraseLlmDialogScreen(
                         }
                     }
                 }
-                if (!micGranted) {
-                    Text(
-                        text = stringResource(R.string.speaking_mic_permission_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = when {
+                        !micGranted -> stringResource(R.string.speaking_mic_permission_hint)
+                        speechState is SpeechRecognitionState.Listening ->
+                            stringResource(R.string.speaking_listening)
+                        else -> stringResource(R.string.llm_dialog_mic_hold_hint)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (speechState is SpeechRecognitionState.Listening) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
         }
     ) { padding ->
@@ -229,12 +225,12 @@ fun PhraseLlmDialogScreen(
                     ) { index ->
                         val message = messages[index]
                         when (message) {
-                            is PhraseLlmDialogViewModel.ChatMessage.User ->
+                            is com.koreanimmersion.domain.llm.LlmChatMessage.User ->
                                 ChatBubble(
                                     text = message.text,
                                     isUser = true
                                 )
-                            is PhraseLlmDialogViewModel.ChatMessage.Teacher ->
+                            is com.koreanimmersion.domain.llm.LlmChatMessage.Teacher ->
                                 ChatBubble(
                                     text = message.text,
                                     isUser = false
@@ -244,6 +240,49 @@ fun PhraseLlmDialogScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LlmDialogMicButton(
+    micGranted: Boolean,
+    isSending: Boolean,
+    isListening: Boolean,
+    onRequestPermission: () -> Unit,
+    onPressStart: () -> Unit,
+    onPressEnd: () -> Unit
+) {
+    val tint = if (isListening) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .then(
+                when {
+                    isSending -> Modifier
+                    !micGranted -> Modifier.clickable(onClick = onRequestPermission)
+                    else -> Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                onPressStart()
+                                tryAwaitRelease()
+                                onPressEnd()
+                            }
+                        )
+                    }
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Default.Mic,
+            contentDescription = stringResource(R.string.llm_dialog_mic),
+            tint = tint,
+            modifier = Modifier.size(28.dp)
+        )
     }
 }
 

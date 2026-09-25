@@ -64,8 +64,9 @@
     <string name="llm_dialog_input_hint">Type in Korean or tap the microphone…</string>
     <string name="llm_dialog_send">Send</string>
     <string name="llm_dialog_mic">Voice input</string>
+    <string name="llm_dialog_mic_hold_hint">Hold the mic and speak in Korean</string>
     <string name="llm_dialog_empty_hint">Start the dialog — ask a question or try a phrase from the topic.</string>
     <string name="llm_dialog_error_empty">Enter a message</string>
-    <string name="llm_dialog_error_server">Could not reach the teacher server. Start the Python server and Ollama on your PC.</string>
+    <string name="llm_dialog_error_server">Could not reach the teacher server. Use the same Wi‑Fi as your PC, run uvicorn, or add openrouter.api.key to local.properties and rebuild.</string>
     <string name="llm_dialog_error_timeout">The server did not respond in time. Check the qwen2.5 model in Ollama.</string>
 </resources>

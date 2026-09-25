@@ -1,13 +1,15 @@
 package com.koreanimmersion.data.config
 
 /**
- * Базовый URL Python/FastAPI сервера.
- * Эмулятор: `10.0.2.2` — хост машины. На реальном устройстве укажите LAN IP ПК.
+ * Прямые запросы к OpenRouter с устройства (без Python/FastAPI на ПК).
  */
 object LlmBackendConfig {
-    var baseUrl: String = DEFAULT_BASE_URL
 
-    const val DEFAULT_BASE_URL = "http://10.0.2.2:8000"
+    const val BASE_URL = "https://openrouter.ai"
 
-    fun chatMessageUrl(): String = "${baseUrl.trimEnd('/')}/api/chat/v1/message"
+    /** Универсальный free-роутер OpenRouter (устойчив к смене тарифов отдельных моделей). */
+    const val DEFAULT_MODEL = "openrouter/free"
+
+    fun chatCompletionsUrl(): String =
+        "${BASE_URL.trimEnd('/')}/api/v1/chat/completions"
 }

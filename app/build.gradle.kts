@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -11,6 +13,16 @@ android {
     namespace = "com.koreanimmersion"
     compileSdk = 35
 
+    val localProperties = Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) {
+            file.inputStream().use { load(it) }
+        }
+    }
+    val openRouterKey = localProperties.getProperty("openrouter.api.key", "")
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+
     defaultConfig {
         applicationId = "com.koreanimmersion"
         minSdk = 26
@@ -18,11 +30,15 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "OPENROUTER_API_KEY", "\"$openRouterKey\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            // MVP: подпись debug-ключом, чтобы release APK ставился на телефон без keystore.
+            // Для публикации в Store замените на release signingConfig.
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -37,6 +53,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

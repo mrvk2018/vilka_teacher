@@ -85,8 +85,9 @@
     <string name="llm_dialog_input_hint">Напишите по-корейски или нажмите микрофон…</string>
     <string name="llm_dialog_send">Отправить</string>
     <string name="llm_dialog_mic">Голосовой ввод</string>
+    <string name="llm_dialog_mic_hold_hint">Удерживайте микрофон и говорите по-корейски</string>
     <string name="llm_dialog_empty_hint">Начните диалог — задайте вопрос или попробуйте фразу из темы.</string>
     <string name="llm_dialog_error_empty">Введите сообщение</string>
-    <string name="llm_dialog_error_server">Не удалось связаться с сервером учителя. Запустите Python-сервер и Ollama на ПК.</string>
+    <string name="llm_dialog_error_server">Не удалось связаться с сервером учителя. Проверьте Wi‑Fi (телефон и ПК в одной сети), запустите `uvicorn` на ПК или добавьте openrouter.api.key в local.properties и пересоберите APK.</string>
     <string name="llm_dialog_error_timeout">Сервер не ответил вовремя. Проверьте модель qwen2.5 в Ollama.</string>
 </resources>
